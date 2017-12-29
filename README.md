@@ -1,8 +1,16 @@
 # Introduction to Data Science
 
-Midterm and Final Project for DATS 6101: Introduction to Data Science by Prince Birring, Alicia Romero and Fei Teng. 
-
 Instructor: Prof. Brian Wright - https://datasci.columbian.gwu.edu/program-adminstration
+
+## Course Description:
+This class covers the basic ideas and techniques of data science, including its definition and the context in data-driven computation and practical applications. 
+
+## LEARNING OBJECTIVES
+ 
+1.	Explain the major trends in the fields of data science and big data. 
+2.	Explain the relative strengths and weaknesses of data science analysis techniques and systems. 
+3.	Describe a selection of analysis techniques and when they should be used. 
+4.	Gain experience with the use of Python and R to do analyses of simple data sets.
 
 ## Projects: 
 1. Midterm Project - Tipping Data <br/>
