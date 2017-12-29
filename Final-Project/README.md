@@ -2,6 +2,8 @@
 
 Final Project for DATS 6101: Introduction to Data Science by Prince Birring, Alicia Romero and Fei Teng
 
+Data : https://www.kaggle.com/mchirico/philadelphiacrimedata
+
 ## Goal
 
 To understand the complexities of gathering data to answer a question that might not necessarily have data readily available, designing and validating a model and presenting model results effectively.
@@ -10,11 +12,11 @@ Instructions.<br/>
 Come up with a question independent of data exploration.<br/>
 
 Use the built-in tools to produce reports summarizing your findings in either RMarkdown or iPython Notebook.  Make sure your findings answer at least the following questions:<br/>
-
-    1. How did you gather and prepare the data for analysis?<br/>
-    2. How did you select and determine the correct model to answer your question?<br/>
-    3. How reliable are your results?<br/>
-    4. What additional information or analysis might improve your model results?<br/>
+        
+   1. How did you gather and prepare the data for analysis?<br/>
+   2. How did you select and determine the correct model to answer your question?<br/>
+   3. How reliable are your results?<br/>
+   4. What additional information or analysis might improve your model results?<br/>
 
 Develop a presentation that provides an overview of your results, inclusive of the limitations of your results and be prepared to demonstrate your knowledge in class.<br/>
 
