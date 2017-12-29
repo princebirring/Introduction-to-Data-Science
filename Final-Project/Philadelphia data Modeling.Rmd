@@ -1,0 +1,461 @@
+---
+title: 'Project2: CRIME IN PHILLADELPHIA'
+author: "Prince Birring, Fei Teng, Alicia Romero"
+date: "November 15, 2016"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+### Abstract.
+Our project focuses on exploring the crime dataset to find out the factor that has most impact on predicting a specific crime - thefts. It analyses a real-world crime dataset for Philadelphia, PA and provides a overall description of Philadelphia's crime situation through a statistical analysis supported by several graphs. Then, it clarifies how we constructed a logistic regression classification model for crime prediction. Proposed model assists law enforcement agencies in discovering crime patterns and predicting future trends, in order to better secure the city.
+
+### Overview:
+Ranked as the third biggest city in the East Coast with a population of 1,526,006, Philadelphia has been reputed as a “dangerous city” for a long time. "With a crime rate of 44 per one thousand residents, Philadelphia has one of the highest crime rates in America compared to all communities of all sizes - from the smallest towns to the very largest cities. One's chance of becoming a victim of either violent or property crime here is one in 23." The statistics show that Philadelphia has one of the highest violent crime rates out of any other city in the US, and within the state of Pennsylvania more than 95 percent of the other communities boast a lower crime rate. It’s very important to understand crimes in Philadelphia and prevent them in advance.
+
+### Question:
+
+> "Which factor has the most impact on predicting "Thefts" in Philly?"
+
+
+
+### Tools used:
+ 
+ - RMarkdown
+ - Python
+ - Tableau
+
+
+link dataset: https://www.opendataphilly.org/dataset/crime-incidents/resource/d6369e07-da6d-401b-bf6e-93fdfacdf24d
+
+
+###Dataset:
+
+We first load the libraries to use:
+```{r }
+
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(ggmap)
+library(maps)
+library(mapdata)
+library(lubridate)
+library(RgoogleMaps)
+library(arules)
+library(readr)
+library(corrplot)
+library(sqldf)
+library(tcltk)
+library(dplyr)
+library(MASS)
+library (tree)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(caret)
+library(Hmisc)
+library(pastecs)
+library(plotluck)
+library(caTools)
+library(ROCR)
+library(gplots)
+
+```
+
+
+Read the file "crime.csv:"
+```{r}
+getwd()
+setwd('C:/Users/princ/Downloads')
+crime <- read.csv("crime.csv")
+#Delete all the Na values from the dataset
+crime <- na.omit(crime)
+head(crime, n=10)
+tail(crime, n=10)
+
+```
+
+As we can see, "crime" is a dataset compose of 12 variables and 2184542 observations. 
+
+
+### Types of variables:
+
+We'll take a closer look at the types of the 12 variables contained within the file.
+
+```{r}
+str(crime)
+
+```
+
+So the data available is:
+
+* Dc_Dist: numeric integer. A two character field that identifies the District boundary.
+* Psa: Factor w/ 30 levels. A single character field that names the Police Service Area boundary
+* Dispatch_Date_Time: date. The date and time that the officer was dispatched to the scene.
+* Dispatch_Date: date. The date that the officer was dispatched to the scene.
+* Dispatch_Time: Factor w/ 1440 levels The time that the officer was dispatched to the scene.
+* Hour: numeric integer. The hour that the officer was dispatched to the scene.
+* Dc_Key: numeric integer. The unique identifier of the crime that consists of Year + District + Unique ID.
+* Location_Block: factor. The location of crime generalized by street block.
+* UCR_General: numeric integer. The rounded crime code, i.e. 614 to 600.
+* Text_General_Code: Categorical factor. Factor w/34 levels. Text descroption of the crime code (description)
+* Police_Districts: numeric integer.A two-character field that identifiesd the Police boundary.
+* Lon: numeric continous. Longitude geographical  coordinate of crime scene.
+* Lan: numeric continous. Latitude geographical coordinate of crime scene.
+
+#http://wiki.radioreference.com/index.php/Philadelphia_County_(PA) map
+
+We calculate new variables for analysis, like: Year, Month, quarter and weekdays, and we conver them into to factors.
+
+```{r}
+#Create new variables
+crime <- separate(crime, col = Month, into = c("Year", "Month"), sep = "-")
+crime$weekday <- wday(as.Date(crime$Dispatch_Date))
+
+#Convert them into Factors
+crime$Year <- as.factor(crime$Year)
+crime$Month <- as.factor(crime$Month)
+crime$Dispatch_Date <- as.Date(crime$Dispatch_Date)
+crime$Day <- day(crime$Dispatch_Date)
+crime$Dc_Dist <- factor(crime$Dc_Dist)
+crime$weekday <- factor(crime$weekday, level = c('1','2','3','4','5','6','7'), order = TRUE, 
+                        label = c('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'))
+
+str(crime)
+```
+
+At this point, we also validate dates-time, longitud and latitud variables for their values in range
+
+```{r}
+
+range(crime$year)
+range(crime$month)
+range(crime$weekday)
+range(crime$Lon)
+range(crime$Lat)
+range(crime$Police_Districts)
+range(crime$Hour)
+
+str(crime)
+```
+
+
+They all seem to have a reasonable range of values.
+
+### Exploratory data analysis.
+
+
+We have structure our analysis as follows: 
+
+
+####1. Understanding total data crime distribution in TIME.
+
+ - Years: 
+ The majority of the cases occur during the years of 2006-2008. In 2009, crimes droped rapidly. And crimes keep decreasing in the following years.
+ 
+We did a little research about why crimes droped. On one hand, the data-driven policing and putting more cops in high-crime zones does have an effect. On the other hand, it related to a demograohic factor - young black male group (the group has the largest share of violent crimes) decreased in Philadelphia, which also contributed to the crime decline slightly. 
+
+```{r fig.height = 5,fig.width=8, fig.align='center'}
+
+table(crime$Year)
+
+```
+
+```{r fig.height = 5,fig.width=8, fig.align='center'}
+#Plotting crime count by year
+by_year <- crime %>% group_by(Year) %>% dplyr::summarise(Total = n())
+by_year$Percent <- by_year$Total/dim(crime)[1] * 100
+ggplot(by_year, aes(Year, Total, fill = Year)) + geom_bar(stat = "identity") + 
+  labs(title = "Crimes By Year ", x = "Year", y = "Count") + 
+  theme(legend.position = "none")
+
+```
+
+ - Months: 
+ As we can see clearly from the graph 'crime by month', crimes in Philadelphia do have a pattern: there are more crimes in summer (August is the peak), and less crime in winter (Feburary and December have least crimes).    
+ 
+```{r}
+table(crime$Month)
+
+```
+
+```{r}
+#Plotting Crime count by Month
+by_month <- crime %>% group_by(Month) %>% dplyr::summarise(Total = n())
+by_month$Percent <- by_month$Total/dim(crime)[1] * 100
+ggplot(by_month, aes(Month, Total, fill = Month)) + geom_bar(stat = "identity") +
+  labs(title = "Crimes By Month" , x = "Month", y = "Count") + 
+  theme(legend.position = "none")
+```
+
+- Weekdays: 
+ It's interesting that more crimes happen in weekdays than weenkends. Tuesday and Wednesday are most dangerous - be careful!
+
+```{r}
+table(crime$weekday)
+```
+
+```{r}
+#Plotting Graph by Weekdays
+by_weekday <- crime %>% group_by(weekday) %>% dplyr::summarise(Total = n())
+ggplot(by_weekday, aes(weekday, Total, fill = weekday)) + geom_bar(stat = "identity") +
+  labs(title = "Crimes By Weekdays" , x = "Weekdays", y = "Count") + 
+  theme(legend.position = "none")
+```
+
+ - Hours: 
+ When we look at the 'crime by hour' graph, it's easy to conclude the pattern of crime in a day. In the early morning (4AM-6AM), there are least crimes. And the 'rush hours' of crimes overlaps with rush hours of weekdays. At 4PM, crimes happen the most. And crime rate remains high in the evening until 1AM. 
+ 
+ 
+```{r}
+table(crime$Hour)
+```
+
+
+```{r fig.height = 5,fig.width=8, fig.align='center'}
+#Plotting Graph by Hours
+by_hour <- crime %>% group_by(Hour) %>% dplyr::summarise(Total = n())
+ggplot(by_hour, aes(Hour, Total, fill = Hour)) + geom_bar(stat = "identity") +
+  labs(title = "Crimes By Hour" , x = "Hours", y = "Count") + 
+  theme(legend.position = "none")
+```
+
+####2. Understanding total data crime distribution by TYPE
+
+The three majority of crimes are 'All other offenses', 'Ohter assaults', and 'Thefts'.
+
+```{r}
+
+table(crime$UCR_General)
+
+```
+
+Lets see their trend over time. From this grph, it took our attention "theft". This crime seems to be growing in time, contrary to the others, where police seem to have had a grip on them since have been reducing or stabilizing in time. For this reason, we focus in "thefts", regrouping our data into cases of "thefts" and "no thefts".
+
+*Please look at the python documents 'Intro to Data Science Final Project'
+
+```{r  fig.height = 5,fig.width=12, fig.align='center'}
+#Plotting crime by Year(Bar Graph/Heat Map)
+by_code_year <- crime %>% group_by(Year, Text_General_Code) %>% dplyr::summarise(Total = n())
+by_code_year[1:10,]
+ggplot(by_code_year, aes(reorder(Text_General_Code, Total), Total, fill = Year)) + geom_bar(stat = "identity") + 
+  scale_y_continuous(breaks = seq(0,450000,50000)) + 
+  coord_flip() + labs(title = "Crimes By Code and Year", x = "Crime Text Code", y = "Total Crimes")
+
+```
+
+
+
+####2. Understanding total data crime distribution by GEOGRAPHIC REGION.
+
+Regarding location the mojority of the crimes occrur in District 15, and PSA 1.
+
+```{r}
+
+table(crime$Police_Districts)
+```
+
+```{r  fig.height = 20,fig.width=30, fig.align='center'}
+#Plotting Heat Map for the Top Crime in Every Police Service Area and Disctrict Headquarters 
+crime_by_dc_psa <- crime  %>% group_by(Dc_Dist, Psa, Text_General_Code) %>% dplyr::summarise(Total = n()) %>% arrange(desc(Total)) %>% top_n(n = 1)
+crime_by_dc_psa <- as.data.frame(crime_by_dc_psa)
+crime_by_dc_psa$Dc_Dist <- factor(crime_by_dc_psa$Dc_Dist)
+crime_by_dc_psa$Text_General_Code <- factor(crime_by_dc_psa$Text_General_Code)
+ggplot(crime_by_dc_psa, aes(Dc_Dist, Psa, fill = Text_General_Code)) + geom_tile(color = "white") + 
+  labs(title = "Top crime in Every Police Service Area and District Head Quarters", 
+       x = "District Police HeadQuarters", y = "Police Service Area")
+
+```
+
+```{r  fig.height = 20,fig.width=30, fig.align='center'}
+
+library(ggmap)
+
+qmplot(Lon, Lat, data = crime, geom = "point", color = Text_General_Code) +
+  facet_wrap(~ Text_General_Code) +
+ theme(legend.position	= "none", legend.text = element_text( size = 12))
+
+```
+As we can see from the graph above, thefts are very densively distributed in Philadelphia.
+
+### Models
+
+Since we believe that finding potential relationships between crime elements can help predict future events, we have limited our data to the following variables: crime type as response variable and time and location.
+We decided to use a Logistic Regression model as a classifier to predict the occurrences of thefts in Philadelphia based on time and location. Informally, a logistic regression model is an equation that relates the conditional probability of an event Y occurring to a weighted combination of values for variables x1, x2, x3, ..., xN . Y is called the response variable while the various x's are called explanatory variables. The regression equation has the following form: 
+
+P r(Y |x1, x2, x3, ..., xN ) ??? ??0 + ??1x1 + ??2x2 + ??3x3 + ... + ??N xN
+
+To create our logistic regression model, we must choose three components:
+1.	Response variable - Y (must be binary) 
+General.Crime.Category: The response variable, categorized between "thefts" and "no thefts"
+2.	Explanatory variables - x1, x2, x3, ..., xN 
+Hour:  Independent variables. Time of the day were crimes were committed. Value range: 0-23 
+Month:  Independent variables. Month of the year were crimes were committed. Value range: 1-12.
+Weekdays:  Independent variables. Weekday were crimes were committed. Value range: 1 - 7
+Police.Districts: Independent variable. Police district were crimes were committed. Value range: 1-22
+
+```{r}
+# Tag types of crime as "theft" or "no theft"
+crime$Text_General_Code<-as.character(crime$Text_General_Code)
+crime$Text_General_Code[crime$UCR_General != 600] <- "no theft"
+crime$Text_General_Code[crime$UCR_General == 600] <- "theft"
+crime$Text_General_Code<- as.factor(crime$Text_General_Code)
+str(crime)
+```
+We used Data splitting which involved partitioning the dataset into an explicit training dataset used to prepare the model and an unseen test dataset used to evaluate the model's performance on unseen data. We used 50% of the data in training our Logistic regression model and 50% is used to evaluate the model's performance. 
+
+```{r}
+# Spilt the data - training and test
+set.seed(88)
+split <- sample.split(crime$Text_General_Code, SplitRatio = 0.50)
+
+subcrime_train <- subset(crime, split == TRUE)
+subcrime_test <- subset(crime, split == FALSE)
+```
+
+```{r}
+# Create logistic regression model
+model <- glm(as.factor(subcrime_train[,"Text_General_Code"]) ~ as.factor(subcrime_train[,"Hour"])+ as.factor(subcrime_train[,"Police_Districts"]) +  as.factor(subcrime_train[,"weekday"])+ as.factor(subcrime_train[,"Month"]), family=binomial(link='logit'), data=subcrime_train)
+
+# see output
+summary(model)
+coefficients(model)
+```
+```{r}
+#Selecting the best-fitted regression model with stepwise regression
+step(model, direction="backward")
+
+# Null and Deviance residuals 
+with(model, null.deviance - deviance)
+with(model, df.null - df.residual)
+with(model, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
+```
+
+
+
+```{r}
+# Odds Ratios only
+exp(coef(model))
+```
+
+
+
+```{r}
+#Make predictions for thefts
+#subcrime_test$pred <- predict(model, subcrime_test$General.Crime.Category, type='response') ojo
+probabilities <- predict(model, subcrime_test$Text_General_Code, type='response')
+predictions <- ifelse(probabilities >0.5,'pos','neg')
+```
+
+```{r}
+# Summarize accuracy  (confussion matrix )
+table(predictions)
+table(subcrime_train$Text_General_Code, ifelse(probabilities > 0.5, 'pos', 'neg'))
+```
+
+Reduction in deviance - The residual deviance is a measure of how 'far off' a particular model is from the ideal model that perfectly fits the training dataset (0 deviance is ideal). The null deviance is the amount of deviance in a model containing only the intercept term ??0 and is a measure of the worst-possible model for predicting a given response variable (independent of choices of explanatory variables) since it doesn't take any explanatory variables into account. The difference between the residual and null deviances indicates how much the explanatory variables helped to improve the model's fit. The larger the reduction in deviance, the better the model fits the training dataset. To determine whether a particular reduction is statistically significant, a p-value can be obtained from an analysis of deviance chi-square test. 
+
+As we can see, The p-value is very small; it is extremely unlikely that we could have seen this much reduction in deviance by chance.
+
+A model with fewer explanatory variables and interaction terms is usually better, given that it has comparable residual deviance to a more complex model. A commonly-used quality metric called AIC (Akaike's Information Criterion) augments the residual deviance measure with the number of explanatory variables and assigns a lower (better) score to simpler models. Our model is very complex due to the number of factor variables and levels, for example Police.Districs has 22 levels, months has 12, and so on.  In order to find the best-fitted regression model, we performed stepwise regression, to add or remove a term from a fitted model, and finally output a model with the least AIC. Our best model has an AIC of 489167.
+
+Fisher scoring iterations is an optimization method that glm() uses to find the best coefficients for the model. You should expect to converged in about six to eight iterations, our converged at 5.
+
+
+In summary, a 'good' model should have relatively few explanatory variables (parsimony reduces the chances of overfitting), fit the training set data points well (have low deviance), and have strong predictive powers (high ROC curve area). Let's try if there is any improvement in the model by reducing the number of variables, we'll make the following data grouping:
+a.	the hours (0-23) into intervals three intervals: T1 - T3 
+b.	weekdays (M,T,W,Th,F,S,Su) into two intervals: WD (working day), WE (weekend)
+c.	months (1:12) into 4 intervals: W(winter),SP(sping),SM(summer) and F(fall)
+
+```{r}
+
+crime$Hour <- replace(crime$Hour, crime$Hour %in% c(1,2,3,4,5,6,7,8),"T1")
+crime$Hour <- replace(crime$Hour, crime$Hour %in% c(9,10,11,12,13,14,15,16),"T2")
+crime$Hour <- replace(crime$Hour, crime$Hour %in% c(17,18,19,20,21,22,23,0),"T3")
+crime$weekday <- replace(crime$weekday, crime$weekday %in% c(1,7),"WE")
+crime$weekday <- replace(crime$weekday, crime$weekday %in% c(2,3,4,5,6),"WD")
+crime$Month <- replace(crime$Month, crime$Month %in% c(12,1,2),"W")
+crime$Month <- replace(crime$Month, crime$Month %in% c(3,4,5),"SP")
+crime$Month <- replace(crime$Month, crime$Month %in% c(6,7,8),"SM")
+crime$Month <- replace(crime$Month, crime$Month %in% c(9,10,11),"F")
+str(crime)
+```
+```{r}
+# Spilt the data - training and test
+set.seed(88)
+split <- sample.split(crime$Text_General_Code, SplitRatio = 0.50)
+
+subcrime_train <- subset(crime, split == TRUE)
+subcrime_test <- subset(crime, split == FALSE)
+```
+
+
+```{r}
+# Create logistic regression model
+model <- glm(as.factor(subcrime_train[,"Text_General_Code"]) ~ as.factor(subcrime_train[,"Hour"])+ as.factor(subcrime_train[,"Police_Districts"]) +  as.factor(subcrime_train[,"weekday"])+ as.factor(subcrime_train[,"Month"]), family=binomial(link='logit'), data=subcrime_train)
+
+# See output
+summary(model)
+coefficients(model)
+```
+
+
+```{r}
+# Create logistic regression model
+model <- glm(as.factor(subcrime_train[,"Text_General_Code"]) ~ as.factor(subcrime_train[,"Hour"])+ as.factor(subcrime_train[,"Police_Districts"]) +  as.factor(subcrime_train[,"weekday"])+ as.factor(subcrime_train[,"Month"]), family=binomial(link='logit'), data=subcrime_train)
+
+# see output
+summary(model)
+coefficients(model)
+```
+
+```{r}
+#Selecting the best-fitted regression model with stepwise regression
+step(model, direction="backward")
+
+# Null and Deviance residuals 
+with(model, null.deviance - deviance)
+with(model, df.null - df.residual)
+with(model, pchisq(null.deviance - deviance, df.null - df.residual, lower.tail = FALSE))
+```
+
+```{r}
+# Odds Ratios only
+exp(coef(model))
+```
+
+```{r}
+#Make predictions for thefts
+#subcrime_test$pred <- predict(model, subcrime_test$General.Crime.Category, type='response') ojo
+probabilities <- predict(model, subcrime_test$Text_General_Code, type='response')
+predictions <- ifelse(probabilities >0.5,'pos','neg')
+
+```
+
+```{r}
+# Summarize accuracy  (confussion matrix )
+table(predictions)
+table(subcrime_train$Text_General_Code, ifelse(probabilities > 0.5, 'pos', 'neg'))
+```
+
+The model improved in sense of readiness in terms of the number of variables but mostly it has the same metrics from reliability than the larger model. 
+
+
+### Observations.
+From the model, we can clearly see that all factors has big impacts on predicting 'Thefts' in Philadelphia. But location (Police District) has the biggest one.
+To be more specific, in police drstrict 22, 8 and 5, in the summer (June, July and August), on weekdays (Monday - Friday), from 17PM to midnight, are most likely to have thefts happen.
+A better improvement would be to implement a Poisson distribution model. It's good to model events that happened during certain time frame and in a specific geographic area.
+
+
+### References.
+
+Associated Press. (2007, Jun. 29). Homicides soar in second-tier east coast cities. Retrieved from:
+http://www.nbcnews.com/id/19513374/ns/us_news-crime_and_courts/t/homicides-soar-second-tier-east-coast-cities/#.WBdbv_krLic
+Crime Incidents. In OpenDataPhilly. Retrieved from https://www.opendataphilly.org/dataset/crime-incidents
+Crime rates for Philadelphia, PA. In Neighborhoodscout. Retrieved from
+https://www.neighborhoodscout.com/pa/philadelphia/crime/#description
+Ferrich, T. (Mar.13, 2013). Exploring reasons for drop in crime. Retrieved from: http://axisphilly.org/article/exploring-reasons-for-drop-in-crime/
+The 25 most dangerous cities in the USA. (2016. Mar. 13). In CitiesJournal. Retrieved from 
+http://www.citiesjournal.com/the-14-most-dangerous-cities-in-the-usa/2/
+Zumel, N., Mount, J. (2014). Practical data science with R. Manning.
