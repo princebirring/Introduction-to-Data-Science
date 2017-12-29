@@ -2,6 +2,8 @@
 
 Midterm and Final Project for DATS 6101: Introduction to Data Science by Prince Birring, Alicia Romero and Fei Teng. 
 
+Professor: Prof. Brian Wright - https://datasci.columbian.gwu.edu/program-adminstration
+
 ## Projects: 
 1. Midterm Project - Tipping Data <br/>
 
