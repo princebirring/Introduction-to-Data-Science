@@ -1,5 +1,5 @@
 ---
-title: 'Project1: Understanding TIPPING'
+title: 'Project1: Understanding Tipping data'
 author: "Prince Birring, Alicia Romero & Fei Teng"
 date: "September 30, 2016"
 output: pdf_document
