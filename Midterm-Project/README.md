@@ -17,12 +17,12 @@ Develop a presentation that provides an overview/results and be prepared to demo
 ## Deliverables
 Please turn in your final copy of each of these items in Blackboard:<br/>
 •	PDF outputs from both R and Python versions of report.  Your report should include at least the following sections:<br/>
-  o	Abstract<br/>
-  o	Background research and question development.<br/>
-  o	Tools used to answer the question.<br/>
-  o	Relevant portions of code.<br/>
-  o	Relevant output visualizations.<br/>
-  o	References<br/>
+  1.	Abstract<br/>
+  2.	Background research and question development.<br/>
+  3.	Tools used to answer the question.<br/>
+  4.	Relevant portions of code.<br/>
+  5.	Relevant output visualizations.<br/>
+  6.	References<br/>
 •	Original code files for the report in RMarkdown and .ipynb format.<br/>
 •	Any slides or resources used for the presentation.<br/>
 
