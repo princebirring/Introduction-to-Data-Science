@@ -1,4 +1,4 @@
-# Introduction to Data Science
+# DATS 6101: Introduction to Data Science
 
 Instructor: Prof. Brian Wright - https://datasci.columbian.gwu.edu/program-adminstration
 
