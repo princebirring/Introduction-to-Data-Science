@@ -1,0 +1,336 @@
+---
+title: 'Project1: Understanding TIPPING'
+author: "Prince Birring, Alicia Romero & Fei Teng"
+date: "September 30, 2016"
+output: pdf_document
+---
+
+### Abstract.
+
+This study explores the variables that affect tipping behavior applying the steps of a Data Science project. The scope of the work only includes the first two stages: Stating the question and the Exploratory analysis. For this work we found a data set created by a food server back in 1990, where he was able to record tips and several features of the business. Using R we analyzed the data and observed interesting operational patterns that influence tipping, at this stage of the project, "party size" and "gender" are one of the most influential factors in tipping. As a recommendation we proposed to fit a linear regression model to properly measure and find a predictable model.
+
+
+### Overview.
+
+Tipping is not mandatory in the USA, but it is expected in many sit down establishments. Many people that work as waiters and waitresses at restaurants, rely on this gratuity to enhance their monthly salary. The amount paid varies from state to state, and some of them allow the employer to use what is called the "tip-credit" (credit against its minimum wage obligation to the employee). For that reason, some of these workers can make $2.13 an hour far less than $7.25 which is the US Federal minimum wage. Additionally to the benefits for the employee, the employer can some extend measure customer satisfaction. 
+
+Typically the average tip is between 15% to 20% of the total price of the meal.Many factors contribute with the tip size, to name a few: type of restaurant, location and atmosphere. But there are others, inherent to the business like party size, gender, amount of the bill, etc., that might also impact the amount received. We would like to explore what are these variables and how they interrelate.
+
+
+
+### Question.
+
+>* What are the factors that affect tipping?
+
+
+
+### Tools used.
+
+For this study we used the data set: "tips" provided by Peter Bryant in his book "Practical Data Analysis: Case Studies in Business Statistics". We also used R for the programming, Markdown for the elaboration of the report and Prezzi to come up with the presentation.
+
+link dataset: https://vincentarelbundock.github.io/Rdatasets/datasets.html
+
+
+###Dataset.
+
+We first load the libraries to use:
+```{r tips}
+
+library(ggplot2)
+library(pastecs)
+library(plotluck)
+```
+
+Read the file "tips.csv:"
+```{r}
+getwd()
+tips <- read.csv("tips.csv")
+head(tips, n=10)
+tail(tips, n=10)
+dim(tips)
+```
+
+As we can see, "tips" is a dataset compose of 8 variables and 244 observations. 
+
+
+### Types of variables.
+
+We'll take a closer look at the types of the 8 variables contained within the file.
+
+```{r}
+str(tips)
+```
+
+So the data available is:
+
+* x, numeric integer.  Works as a correlative for the number of observations (rows).
+* total_bill: numeric continuous. Total bill amount in dollars, including tax.
+* tip: numeric continuous. Tip amount in dollars (our dependent variable and element of study)
+* sex: nominal-categorical. Sex of the person that is paying for the bill (1 = Female, 2 = Male).
+* smoker: nominal-categorical. Whether is there a smoker in the party (0 = Yes, 1 = No).
+* day: nominal-categorical. Day of the week (3 = Sunday, 4 = Saturday, 5 = Thursday, 6 = Friday)
+* time: nominal-categorical.Time of the day (0 = Dinner, 1 = Lunch)
+* size: numeric integer (it can be treated as categorical because it has few values). Size of the party.
+
+After analyzing them, we decided to:
+
+1. Relabel ordinal variables do give them a natural ordering.
+
+  * sex: nominal-categorical. Sex of the person that is paying for the bill (1 = Male, 2 = Female).
+  * smoker: nominal-categorical. Whether is there a smoker in the party (0 = No, 1 = Yes).
+  * day: nominal-categorical. Day of the week (3 = Thursday, 4 = Friday, 5 = Saturday, 6 = Sunday).
+  * time: nominal-categorical.Time of the day (1 = Lunch, 2 = Dinner).
+  
+2. Create and add a new variable to our dataset that captures the relation between "tip" and "tota_bill", we'll call it "tip_rate". The reason of doing this is because after all, tips are calculated as a percentage of the total bill.
+
+3. Delete the first column "x" which has no added value for our study.
+
+
+```{r}
+
+tips$smoker <- factor(tips$smoker, levels = c("No","Yes"),order = TRUE,labels = c("No","Yes"))
+tips$sex <- factor(tips$sex, levels = c("Male","Female"), order = TRUE,labels = c("Male","Female"))
+tips$day <- factor(tips$day, levels = c("Thur","Fri","Sat","Sun"),order = TRUE,  labels = c("Thur","Fri","Sat","Sun"))
+tips$time <- factor(tips$time, levels = c("Lunch","Dinner"), order = TRUE, labels = c("Lunch","Dinner"))
+
+tip_rate <- tips$tip/tips$total_bill*100
+tips$tip_rate<-tip_rate
+
+tips<- tips[c( "total_bill" ,"tip","sex","smoker","day","time","size","tip_rate")]
+
+str(tips)
+```
+
+
+At this point, we also validate the numeric variables for  the reasonableness of their values:
+
+* total_bill range:
+
+```{r}
+range(tips$total_bill)
+```
+* tip range:
+```{r}
+range(tips$tip)
+```
+* tip_rate range:
+```{r}
+range(tips$tip_rate)
+```
+
+They all seem to have a reasonable range of values.
+
+
+
+### Check for data completeness.
+
+We will check if there is any missing data which could cause serious problems in our observations and future conclusions.
+
+```{r}
+colSums(is.na(tips))
+```
+
+There are no missing values, so data is complete and ready for analysis.
+
+
+### Exploratory data analysis.
+
+
+We have structure our analysis as follows: 
+
+
+####1. Univariate quantitative variables: total_bill, tips and tip_rate. 
+For them we'll calculate:
+
+  a) The mean, media and mode for quantitative variable to find out if the sampled values are concentrated around certain value
+  b) Standard deviation and variance to measure the amount of dispersion (spread) of their set of values.
+  c) Histogram and density plot to have a feeling of their distribution.
+
+
+```{r fig.height = 5,fig.width=5, fig.align='center'}
+
+# Create data structures for tables and charts
+my_numdata <- tips[c("total_bill","tip","tip_rate")]
+
+round(stat.desc(my_numdata,1),2) 
+
+names(sort(-table(tips$total_bill)))[1]
+names(sort(-table(tips$tip)))[1]
+names(sort(-table(tips$tip_rate)))[1]
+
+ggplot(tips, aes(x=total_bill)) + 
+  geom_histogram(binwidth=1.5, fill="#377EBB") + 
+  labs(x= "Total Bill($)", y="Count",title="Customer Total Bill")
+
+ggplot(tips, aes(x=total_bill)) + geom_density(adjust=0.8, fill="#377EBB") + labs(x="Total Bill($)", y="Density", title="Customer Total Bill")
+
+ggplot(tips, aes(x=tip)) + 
+  geom_histogram(binwidth=0.4, fill="#377EBB") + 
+  labs(x="Tip($)", y="Count", title="Tip by Customer")
+
+ggplot(tips, aes(x=tip)) + geom_density(adjust=0.9,fill="#377EBB") + labs(x="Tip($)", y="Density", title="Tip by Customer") 
+
+ggplot(tips, aes(x=tip_rate)) + 
+  geom_histogram(binwidth=1, fill="#377EBB") + 
+  labs(x="Tip Rate($)", y="Count", title="Tip Rate by Customer")
+
+ggplot(tips, aes(x=tip_rate)) + geom_density(adjust=0.8,fill="#377EBB") + labs(x="Tip rate (%)", y="Density", title="Tips Rate by Customer") 
+
+```
+
+The average bill is $19.78, the average tip is $3.00 and the average tip rate is 16.08%. Their mode is at their maximun peak, that would be $13.48 for total bill, $2.00 for tips and 14.48% fro tip rate. For all of them their mode is less than their median, and their median is smaller than their mean; this is typical of right skewed distributions. We confirm this by looking at their histograms and density plots, they show the presence of some big bill amounts, tips and tip rates in the data (outliers).
+
+
+####2. Univariate categorical variables: sex, smoke, time, days and party size.
+
+For them we'll calculate:
+
+    a) Frequency table to understand the distribution of each category. 
+    b) Bar chart as visualization tool.
+
+*Gender distribution: *
+```{r fig.height = 5,fig.width=5, fig.align='center'} 
+table(tips$sex)
+ggplot(tips, aes(x=sex)) + geom_bar(width=0.3, fill="#377EBB") + labs(x="Gender", y="Count", title="Customers by Gender")
+```
+We can see that man tend to pay more bills and tips than women (thank God).
+
+*Smoker population distribution:* 
+```{r fig.height = 5,fig.width=5, fig.align='center'}
+table(tips$smoker)
+ggplot(tips, aes(x=smoker)) + geom_bar(width=0.3, fill="#377EBB")  + labs(x="Smoking Status", y="Count", title="Customer by Smoking Status")
+```
+This  establishment is visited more by non smokers customers than smokers (thank God again).
+
+*Weekly activity distribution:*
+```{r fig.height = 5,fig.width=5, fig.align='center'}
+table(tips$day)
+ggplot(tips, aes(x=day)) + geom_bar(width=0.3, fill="#377EBB") + labs(x="Week days", y="Count", title="Weekly Activity")
+```
+The busiest days of the week are weekends, especially Saturdays.
+
+*Dinning services distribution:*
+```{r fig.height = 5,fig.width=5, fig.align='center'}
+table(tips$time)
+ggplot(tips, aes(x=time)) + geom_bar(width=0.3, fill="#377EBB") + labs(x="Dinning Services", y="Count", title="Dinning Services Activity")
+```
+Customers come more for dinner than for lunch. 
+
+*Party size distribution:*
+```{r fig.height = 5,fig.width=5, fig.align='center'}
+table(tips$size)
+ggplot(tips, aes(x=size)) + geom_bar(width=0.3, fill="#377EBB") + labs(x="Party Size", y="Count", title="Customer by Party Size ")
+```
+The most popular group size that visit the restaurant is couples, followed by groups of 3 and 4 people. 
+  
+  
+####3. Multivariate continuos variables, relation between: total_bill, tips and tip_rate.
+
+For them we'll calculate:
+
+  a) Scatterplot to visualise realation between variables.
+  b) Correlation coeficient to meassure strenght of their linear relation. 
+`
+```{r fig.height = 5,fig.width=5, fig.align='center'}
+ggplot(tips, aes(x=total_bill, y=tip)) + 
+  geom_point() + 
+  labs(x="Total Bill($)", y="Tip($)", title="Bill Amount vs Tip with 16% Tip Rate line") +
+  geom_abline(intercept = 0, slope = (0.16), color = "red", show.legend = TRUE)
+
+
+cor(tips$total_bill,tips$tip)
+```
+
+As it can be seen in the scatterplot and later corroborated by the correlation coefficient of 0.68, there is a strong linear relation between the Bill Amount and the Tip, so one would expect that the bigger the cost of the meal the bigger the tip. 
+
+
+####4. Multivariate categorical variables, relations for example between: Gender by smoking status, Gender by weekly activity and Dinning services by weekly activity.
+
+For them we'll calculate:
+
+  a) Cross tabulation to understand how the samples share a pair of levels. We'll show the count% of observations available in each combination of row and column categories.
+  b) Garph mosaic plots to see their combine distribution.
+
+*Gender by smoking status distribution: *
+```{r  fig.height = 5,fig.width=5, fig.align='center'}
+table(tips$smoker, tips$sex)
+plotluck(sex~smoker, data=tips) + 
+  labs(x="Smoker Status", y="Gender %", fill="sex", title="Gender by Smoker Status")
+```
+There is roughly no difference between smokers distribution by gender.
+
+*Gender by weekly activity distribution:*
+```{r  fig.height = 5,fig.width=5, fig.align='center'}
+table(tips$sex, tips$day)
+plotluck(sex~day, data=tips) + 
+  labs(x="Weekly Activity", y="Gender%", fill="Sex", title="Gender by weekly activity")
+```
+During weekdays, both genders almost equally pay for the meals and tips, during the weekend, males tend to pay more.
+
+*Dinning services by weekly activity distribution:*
+```{r  fig.height = 5,fig.width=5, fig.align='center'}
+table(tips$time, tips$day)
+plotluck(time~day, data=tips) + 
+  labs(x="Weekly Activity", y="Time%", fill="time", title="Dinning by Weekly Activity")
+```
+The restaurant is busier during lunch time on Thursdays and has some lunch activity on Fridays; on weekends customers only come for dinner.
+
+
+
+              
+####5. For multivariate continuous and categorical variables, relations for example between: tips by gender and smoking status, tips by dinning services and weekly activity and tips by party size and weekly activity.
+
+For them we'll calculate:
+
+  a) Aggregate tables with combine distributions with statistics such as: mean, median, count, etc.
+  a) Scatterplot to understand relation between the categorical and numerical variables.
+
+*Average tip, total_bill and tip_rate by gender and smoking status:*
+```{r fig.height = 5,fig.width=6, fig.align='center'}
+aggregate(tips[c("tip","total_bill", "tip_rate")],by=list(sex=tips$sex, smoker = tips$smoker ), mean, na.rm=TRUE)
+aggregate(tips[c("tip","total_bill", "tip_rate")],by=list( smoker = tips$smoker ), mean, na.rm=TRUE)
+
+ggplot(tips, aes(x=total_bill, y=tip, col=factor(sex))) + 
+  geom_point(alpha= 0.5) + 
+  facet_grid(smoker~sex) + 
+  geom_abline(intercept = 0, slope = (0.16), show.legend = TRUE)+  
+  labs(x="Total Bill($)", y="Tip($)", col="Size", title="Tip by Gender and Smoker Status with 16% tip rate line")
+```
+We can see that even if the average tip rate from smokers is higher than non smokers, the population is more scatter and less reliable giving tips.
+
+*Average tip, total_bill and tip_rate by dinning service and weekly activity:*
+```{r fig.height = 5,fig.width=7, fig.align='center'}
+aggregate(tips[c("tip","total_bill", "tip_rate")],by=list(day=tips$day,time=tips$time), mean, na.rm=TRUE)
+
+ggplot(tips, aes(x=total_bill, y=tip, col=factor(time))) + 
+  geom_point(alpha= 0.5) + 
+  facet_grid(day~time) + 
+  geom_abline(intercept = 0, slope = (0.16), show.legend = TRUE)+  
+  labs(x="Total Bill($)", y="Tip($)", col="Time", title="Tip by Dinning Service and Weekly Activity with 16% tip rate line")
+```
+Higher tips are given  during lunch than dinner time.
+
+*Average tip, total_bill and tip_rate by party size and weekly activity:*
+```{r fig.height = 5,fig.width=7, fig.align='center'}
+aggregate(tips[c("tip","total_bill", "tip_rate")],by=list(day=tips$day,size=tips$size), mean, na.rm=TRUE)
+
+ggplot(tips, aes(x=total_bill, y=tip, col=factor(size))) + 
+  geom_point(alpha= 0.5) + 
+  facet_grid(day~size) + 
+  geom_abline(intercept = 0, slope = (0.16), show.legend = TRUE)+  
+  labs(x="Total Bill($)", y="Tip($)", col="Sizs", title="Tip by Party Size and Weekly activity with 16% Tip Rate line")
+```
+The most generous group is the couples, with a pretty consistent habit of tipping through out the whole week. 
+
+### Observations.
+
+From the above analysis we can observe how the tip rate is influence by the customer gender, smoker status, dinning service, day of the week and finally the party size. At this stage, some of fators' influences seem stronger than others like the party size. We recommend as a following step for this analysis, to create a linear regression model with the variable tip rate as the response variable, in order to have a better measure of their influence and predictive capability. 
+
+
+### References.
+
+ - Bureau of Labor and statistics: http://www.bls.gov/oes/current/oes353031.htm
+ 
+ - "Practical Data Analysis: Case Studies in Business Statistics", Peter Bryant
+
+
