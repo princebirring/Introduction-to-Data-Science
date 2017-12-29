@@ -26,5 +26,12 @@ Please turn in your final copy of each of these items in Blackboard:<br/>
 •	Original code files for the report in RMarkdown and .ipynb format.<br/>
 •	Any slides or resources used for the presentation.<br/>
 
+## Grading
+1.	20% Development of SMART Research Question
+2.	20% R Programming skills
+3.	20% Python Programming skills
+4.	20% Presentation
+5.	20% Group participation
+
 ## Prezi Presenation Link
 Link: http://prezi.com/dm7_ql0lawyh/?utm_campaign=share&utm_medium=copy
